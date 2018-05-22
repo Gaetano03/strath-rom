@@ -11,12 +11,12 @@ int main(int argc, char *argv[] ){
     cout << "\nMain: start" << endl;
 
     string flag = argv[1];
-    int Ns = 36;
+    int Ns = 60;
     int sol_freq = 1;
-    int m_skip = 2;
+    int m_skip = 6;
     int read_sol_freq = m_skip*sol_freq;
 
-    string directory = "/home/gaetano/workspace/Simulations/30P30Nunsteady/19deg/ClusteringImplicit/";
+    string directory = "/home/gaetano/workspace/Simulations/square_cylinder/";
     string filename = directory + "restart_flow.dat";
     int Nr = Ngrid_points( filename );
 
@@ -43,7 +43,7 @@ int main(int argc, char *argv[] ){
 
     // string file_in = "su2-snapshots/restart_flow_";
     string file_comp = "restart_flow_"; 
-    string file_in = "restart_flow_";
+    string file_in = "su2-snapshots/restart_flow_";
     string file_temp, file_coef_u, file_coef_v;
     string format = ".dat";
     string file_out = "Outpt-ROM/DMDRec_";
@@ -55,10 +55,10 @@ int main(int argc, char *argv[] ){
     y = mat_xy.col(1);
 
     int k = 0;
-    int n_t_first_snap = 0; 
+    int n_t_first_snap = 2301; 
     // vector<int> n_t = {5, 15, 25, 1, 65, 95, 125, 155, 185, 235, 285, 335, 385, 455, 555, 655};
     vector<int> n_t = {7, 7, 13, 18, 32};
-    double dt = 0.001;
+    double dt = 0.0015;
     double Dt = read_sol_freq*dt;
     double t_init = dt*n_t_first_snap;
     vector<double> t_star(n_t.size());
@@ -488,7 +488,7 @@ MatrixXcd phi_dmd_v = DMD_basis( Nr, snap_v, lam_dmd_v, "EXACT");
 // cout << "Lambda dmd u : " << lam_dmd_u << endl << endl;
 
 stringstream dum1;
-dum1 << setfill('0') << setw(5) << to_string(0);
+dum1 << setfill('0') << setw(5) << to_string(n_t_first_snap);
 file_temp = directory + file_in + dum1.str() + format;
 // 
 cout << "Reading Initial state " << file_temp << endl;
@@ -515,10 +515,10 @@ Init_state_v = rho_v.cwiseQuotient(rho);
 // cout << "Fields reconstructed" << endl;
 
 MatrixXd Mode_dmd(Nr, 2*Ncut);
-// MatrixXcd phi_dmd_u_saved = phi_dmd_u.leftCols(Ncut); 
-// MatrixXcd phi_dmd_v_saved = phi_dmd_v.leftCols(Ncut); 
+MatrixXcd phi_dmd_u_saved = phi_dmd_u.leftCols(Ncut); 
+MatrixXcd phi_dmd_v_saved = phi_dmd_v.leftCols(Ncut); 
 // Mode_dmd << phi_dmd_u_saved.real(), phi_dmd_v_saved.real();
-Mode_dmd << phi_dmd_u.real(), phi_dmd_v.real();
+// Mode_dmd << phi_dmd_u.real(), phi_dmd_v.real();
 cout << " Mode stored" << endl << endl;
 
 vector<string> headersdmd_mode(2*Ncut+3);
@@ -620,14 +620,14 @@ double t_in = 0.0;
 //while ( err < 0.7 || count > 100 ){
 
     //count++;
-for ( int i = 0; i < Ns*m_skip-1; i++){
+for ( int i = 0; i < Ns*m_skip-1; i +=3){
 
     
     cout << "Time instant : " << t_in << endl;
 
 
     stringstream dum5;
-    dum5 << setfill('0') << setw(5) << to_string(i);
+    dum5 << setfill('0') << setw(5) << to_string(i+n_t_first_snap);
     file_temp = directory + file_in + dum5.str() + format;
 
     cout << "Reading exact solution  " << file_temp << endl;
@@ -669,7 +669,7 @@ for ( int i = 0; i < Ns*m_skip-1; i++){
     write_restart2D(file_temp, headersrec, x, y, Rec);
 
 
-    t_in += 0.001;
+    t_in += 0.0015*3;
 
 }
 

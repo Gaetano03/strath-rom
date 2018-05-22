@@ -307,7 +307,7 @@ MatrixXd SPOD_basis( int Nr, MatrixXd snap, int Nf,  VectorXd &K_pc, VectorXd &l
 // } 
 
 
-MatrixXcd DMD_basis( int Nr, MatrixXd snap, VectorXcd &lam, string flag = "STD"){
+MatrixXcd DMD_basis( int Nr, MatrixXd &snap, VectorXcd &lam, string flag = "STD"){
 
     int Ns = snap.cols() - 1;
     MatrixXd dmd0_snap = snap.leftCols(Ns);
@@ -353,17 +353,21 @@ MatrixXcd DMD_basis( int Nr, MatrixXd snap, VectorXcd &lam, string flag = "STD")
     EigenSolver<MatrixXd> es(Atilde); 
     lam = es.eigenvalues();
     MatrixXcd eig_vec = es.eigenvectors();
+
     // cout << "Calculated eigenvalues and eigenvectors" << endl;
+    
+    MatrixXcd appo = dmd1_snap*Vp*Sig_inv;
+
     if (flag == "EXACT"){
         MatrixXcd phi(Nr,Vp.cols());
 
         for (int i = 0; i < Vp.cols(); i++)
-            phi.col(i) = 1.0/lam(i)*dmd1_snap*Vp*Sig_inv*eig_vec.col(i);
-
+            phi.col(i) = 1.0/lam(i)*appo*eig_vec.col(i);
+        
         return phi;
     }
 
-    return dmd1_snap*Vp*Sig_inv*eig_vec;
+    return appo*eig_vec;
 
 }
 
@@ -409,7 +413,7 @@ MatrixXcd coefs_dmd ( MatrixXcd phi, VectorXd Init_state){
 
 VectorXcd Rec_field_dmd ( int Nr, MatrixXcd phi, VectorXcd lam, VectorXcd coeffs, double t ){
 
-    double dt = 0.002;
+    double dt = 0.0015*6;
     VectorXcd final_state = VectorXcd::Zero(Nr);
     VectorXcd omega(lam.size());
 
