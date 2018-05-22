@@ -1,0 +1,8 @@
+# Files to be ignored by git
+/docs/
+/.project
+/build/
+/cmake-build-debug/
+CMakeLists.txt.user
+.idea/
+*~
