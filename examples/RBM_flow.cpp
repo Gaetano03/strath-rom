@@ -11,12 +11,12 @@ int main(int argc, char *argv[] ){
     cout << "\nMain: start" << endl;
 
     string flag = argv[1];
-    int Ns = 60;
+    int Ns = atoi(argv[2]);
     int sol_freq = 1;
-    int m_skip = 6;
+    int m_skip = atoi(argv[3]);
     int read_sol_freq = m_skip*sol_freq;
 
-    string directory = "/home/gaetano/workspace/Simulations/square_cylinder/";
+    string directory = "/home/gaetano/workspace/Simulations/30P30Nunsteady/19deg/";
     string filename = directory + "restart_flow.dat";
     int Nr = Ngrid_points( filename );
 
@@ -46,7 +46,7 @@ int main(int argc, char *argv[] ){
     string file_in = "su2-snapshots/restart_flow_";
     string file_temp, file_coef_u, file_coef_v;
     string format = ".dat";
-    string file_out = "Outpt-ROM/DMDRec_";
+    string file_out = "Outpt-ROM/SPOD/SPODRec_";
 
     vector<int> col_xy = { 1, 2 };
     read_restartDat( filename, col_xy, Nc, mat_xy );
@@ -55,10 +55,10 @@ int main(int argc, char *argv[] ){
     y = mat_xy.col(1);
 
     int k = 0;
-    int n_t_first_snap = 2301; 
-    // vector<int> n_t = {5, 15, 25, 1, 65, 95, 125, 155, 185, 235, 285, 335, 385, 455, 555, 655};
-    vector<int> n_t = {7, 7, 13, 18, 32};
-    double dt = 0.0015;
+    int n_t_first_snap = 0; 
+    vector<int> n_t = {1, 3, 5, 7, 9};
+    // vector<int> n_t = {2304, 2310, 2316, 2322, 2328};
+    double dt = 0.001;
     double Dt = read_sol_freq*dt;
     double t_init = dt*n_t_first_snap;
     vector<double> t_star(n_t.size());
@@ -94,7 +94,7 @@ int main(int argc, char *argv[] ){
     VectorXd K_pc_u(Ns);
     VectorXd K_pc_v(Ns);
 
-    int Ncut = 35;
+    int Ncut = 10;
 
     vector<string> headers_mode(2*Ncut+3);
 
@@ -140,27 +140,9 @@ int main(int argc, char *argv[] ){
     MatrixXd Data(Nr,2);
     VectorXd mean_u = snap_u.rowwise().mean();
     VectorXd mean_v = snap_v.rowwise().mean();
-
     
     
     if ( flag == "POD"){
-
-        int kk = 0;
-        stringstream dum;
-        dum << setfill('0') << setw(5) << to_string(n_t[kk]);
-        file_temp = directory + file_in + dum.str() + format;
-
-        cout << "Reading exact solution  " << file_temp << endl;
-
-        read_restartDat( file_temp, n_cols, Nc, field);
-
-        VectorXd rho = field.col(0);
-        VectorXd rho_u = field.col(1);
-        VectorXd rho_v = field.col(2);
-
-        VectorXd U_tstar = rho_u.cwiseQuotient(rho);
-        VectorXd V_tstar = rho_v.cwiseQuotient(rho);
-
 
 
 
@@ -168,16 +150,28 @@ int main(int argc, char *argv[] ){
         phi_v = POD_basis( Nr, snap_v, K_pc_v, lam_v, Coeffs_v);
         int Nmod_u = phi_u.cols();
         int Nmod_v = phi_v.cols();
-//         write_restart("POD_Modes.dat", headers, x, y, phi.leftCols(Ncut));
-//         write_dat("POD_coefs_v.dat", Coeffs);
+        VectorXd t_step(Ns*m_skip);
+
+        MatrixXd phi(Nr, 2*Ncut);
+        phi << phi_u.leftCols(Ncut), phi_v.leftCols(Ncut) ; 
+        write_restart2D(directory + "Outpt-ROM/POD/POD_Modes.dat", headers_mode, x, y, phi);
+        write_dat(directory + "Outpt-ROM/POD/POD_coefs_u.dat", Coeffs_u);
+        write_dat(directory + "Outpt-ROM/POD/POD_coefs_v.dat", Coeffs_v);
+
+        MatrixXd Sig_u = MatrixXd::Zero(phi_u.cols(), phi_u.cols());
+        MatrixXd Sig_v = MatrixXd::Zero(phi_v.cols(), phi_v.cols());
+
+        for ( int i = 0; i < phi_u.cols(); i++ )
+            Sig_u(i, i) = sqrt(lam_u(i));
+        
+        for ( int i = 0; i < phi_v.cols(); i++ )
+            Sig_v(i, i) = sqrt(lam_v(i));
 
 
         cout << "Number of snapshots : " << Ns << endl;
         cout << "Number of non-zero modes for u : " << Nmod_u << endl;
         cout << "Number of non-zero modes for v : " << Nmod_v << endl << endl;
 
-
-//         MatrixXd err_POD(Nmod, n_t.size());
         vector<string> headers1(5);
 //         MatrixXd Rec(Nr, n_t.size());
         headers1[0] = "\"PointID\"";
@@ -186,31 +180,60 @@ int main(int argc, char *argv[] ){
         headers1[3] = "\"uPOD\"";
         headers1[4] = "\"vPOD\"";
 
-//         for ( int i = 0; i < n_t.size(); i++){
-        
+        MatrixXd Rec(Nr,2);
 
-        VectorXd coefs_interp_u = RBF_Coefs( Coeffs_u.transpose(), phi_u, Dt, t_star[kk], t_init);
-        VectorXd coefs_interp_v = RBF_Coefs( Coeffs_v.transpose(), phi_v, Dt, t_star[kk], t_init);
+        VectorXd err_POD_u(Ns*m_skip);
+        VectorXd err_POD_v(Ns*m_skip);
+        double t = t_init;
+        int count = 0;
+
+        for ( int kk = n_t_first_snap; kk < n_t_first_snap + read_sol_freq*Ns; kk += sol_freq){
+            t_step(count) = t;
+
+            stringstream dum;
+            dum << setfill('0') << setw(5) << to_string(kk);
+            file_temp = directory + file_in + dum.str() + format;
+
+            cout << "Reading exact solution  " << file_temp << endl;
+
+            read_restartDat( file_temp, n_cols, Nc, field);
+
+            VectorXd rho = field.col(0);
+            VectorXd rho_u = field.col(1);
+            VectorXd rho_v = field.col(2);
+
+            VectorXd U_tstar = rho_u.cwiseQuotient(rho);
+            VectorXd V_tstar = rho_v.cwiseQuotient(rho);
 
 
-//             for ( int j = 0; j < Nmod; j++){
+//             MatrixXd err_POD(Nmod, n_t.size());
 
-        Rec_field_tstar_POD_u = phi_u*coefs_interp_u.head(Nmod_u) + mean_u;
-        Rec_field_tstar_POD_v = phi_v*coefs_interp_v.head(Nmod_v) + mean_v;
 
-        VectorXd diff_POD_u = Rec_field_tstar_POD_u - U_tstar;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-        double err_POD_u = diff_POD_u.norm()/U_tstar.norm();
-        VectorXd diff_POD_v = Rec_field_tstar_POD_v - V_tstar;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-        double err_POD_v = diff_POD_v.norm()/V_tstar.norm();
+//             for ( int i = 0; i < n_t.size(); i++){
+
+
+            VectorXd coefs_interp_u = RBF_Coefs( Coeffs_u.transpose(), phi_u, Dt, t, t_init);
+            VectorXd coefs_interp_v = RBF_Coefs( Coeffs_v.transpose(), phi_v, Dt, t, t_init);
+
+
+//                 for ( int j = 0; j < Nmod; j++){
+
+            Rec_field_tstar_POD_u = phi_u*Sig_u*coefs_interp_u.head(Nmod_u) + mean_u;
+            Rec_field_tstar_POD_v = phi_v*Sig_v*coefs_interp_v.head(Nmod_v) + mean_v;
+
+            VectorXd diff_POD_u = Rec_field_tstar_POD_u - U_tstar;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
+            err_POD_u(count) = diff_POD_u.norm()/U_tstar.norm();
+            VectorXd diff_POD_v = Rec_field_tstar_POD_v - V_tstar;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
+            err_POD_v(count) = diff_POD_v.norm()/V_tstar.norm();
 
 //             }
 
 //         Rec.col(i) = Rec_field_tstar_POD;
 //         headers1[i+3] = "\"u"+ to_string(n_t[i])+"\"";
 
-        cout << "Time step  " <<  n_t[kk] << endl;
-        cout << "Error for u using all modes : " << err_POD_u << endl;
-        cout << "Error for v using all modes : " << err_POD_v << endl;
+            cout << "Time step  " <<  t << endl;
+            cout << "Error for u using all modes : " << err_POD_u(count) << endl;
+            cout << "Error for v using all modes : " << err_POD_v(count) << endl;
 
 //             // MatrixXd fieldn(Nr, 1);
 
@@ -233,9 +256,23 @@ int main(int argc, char *argv[] ){
 //             // cout << "Error using linear interpolation : " << err_interp << endl << endl;
 
 // }   256
-        MatrixXd Rec(Nr,2);
-        Rec << Rec_field_tstar_POD_u, Rec_field_tstar_POD_v; 
-        write_restart2D( directory + "Outpt-ROM/Reconstructed_fields_PODt7snap15.dat", headers1, x, y, Rec);
+            stringstream dum7;
+            dum7 << setfill('0') << setw(5) << to_string(kk);
+            file_temp = directory + file_out + dum7.str() + format;
+            cout << "Writing " << file_temp << endl << endl;
+            
+            Rec << Rec_field_tstar_POD_u, Rec_field_tstar_POD_v; 
+            write_restart2D( file_temp, headers1, x, y, Rec);
+            t += dt*sol_freq;
+            count ++;
+        }
+        MatrixXd err(Ns*m_skip,3);
+        err << t_step, err_POD_u, err_POD_v;
+        cout << "Writing err_time.dat" << endl;
+        write_dat(directory + "Outpt-ROM/POD/err_time.dat", err);
+
+        cout << "Main end" << endl;
+
 //     write_dat("Error_reconstruction_Nmodes-vs-timestep_v.dat", err_POD);
 
 } else if ( flag == "SPOD" ){
@@ -257,7 +294,7 @@ int main(int argc, char *argv[] ){
     // cout << "Error norm of POD :" << setprecision(12) << err_POD << endl;
     // cout << endl;
 
-    int Nfnum = 8;
+    int Nfnum = 7;
     MatrixXd cumsum_u(Ns, Nfnum);
     MatrixXd lambda_u(Ns, Nfnum);
     MatrixXd cumsum_v(Ns, Nfnum);
@@ -272,7 +309,7 @@ int main(int argc, char *argv[] ){
 
     stringstream dum;
     dum << setfill('0') << setw(5) << to_string(n_t[kk]);
-    file_temp = directory + file_comp + dum.str() + format;
+    file_temp = directory + file_in + dum.str() + format;
 
     cout << "Reading exact solution  " << file_temp << endl;
 
@@ -341,9 +378,9 @@ int main(int argc, char *argv[] ){
 
         stringstream buffer;
         buffer << setfill('0') << setw(5) << to_string(Nf(i));
-        file_temp = directory + "Outpt-ROM/SPOD_modes_Nf_" + buffer.str()+format;
-        file_coef_u = directory + "Outpt-ROM/SPOD_coefsu_Nf_" + buffer.str()+format;
-        file_coef_v = directory + "Outpt-ROM/SPOD_coefsv_Nf_" + buffer.str()+format;
+        file_temp = directory + "Outpt-ROM/SPOD/SPOD_modes_Nf_" + buffer.str()+format;
+        file_coef_u = directory + "Outpt-ROM/SPOD/SPOD_coefsu_Nf_" + buffer.str()+format;
+        file_coef_v = directory + "Outpt-ROM/SPOD/SPOD_coefsv_Nf_" + buffer.str()+format;
         cout << " Writing " << file_temp << " and  coefficients" << "\t";
 
         MatrixXd Modes(Nr, 2*Ncut);
@@ -402,6 +439,9 @@ int main(int argc, char *argv[] ){
                 err_SPOD_v(Nmod_v+k,i) = err_SPOD_v(Nmod_v-1+k,i);   
         }        
         
+        MatrixXd Rec(Nr, 2);
+        Rec << Rec_field_tstar_SPOD_u, Rec_field_tstar_SPOD_v;
+
         // Rec_v.col(i) = Rec_field_tstar_SPOD_v;
         // headers1[Nfnum+i+3] = "\"v"+ to_string(Nf(i))+"\"";
 
@@ -409,13 +449,16 @@ int main(int argc, char *argv[] ){
         cout << "Error norm of SPOD on v using all modes for Nf = " << Nf(i) << " : " << setprecision(12) << err_SPOD_v(Nmod_v-1,i) << endl;
 
         // cout << "cycle ended" << endl;
-        if (i == 0){    
-            MatrixXd Rec(Nr, 2);
-            Rec << Rec_field_tstar_SPOD_u, Rec_field_tstar_SPOD_v;  
-            headers1[3] = "\"uPOD\"";   
-            headers1[4] = "\"vPOD\"";   
-            write_restart2D( directory + "Outpt-ROM/Reconstructed_fields_POD.dat", headers1, x, y, Rec  );
-        }
+    //     if (i == 0){    
+    //         MatrixXd Rec(Nr, 2);
+    //         Rec << Rec_field_tstar_SPOD_u, Rec_field_tstar_SPOD_v;  
+        headers1[3] = "\"uSPOD\"";   
+        headers1[4] = "\"vSPOD\"";  
+        stringstream buffer1;
+        buffer1 << setfill('0') << setw(5) << to_string(Nf(i));
+        file_temp = directory + "Outpt-ROM/SPOD/SPODRec_" + to_string(n_t[kk]) + "_" + buffer1.str() + format; 
+        write_restart2D( file_temp, headers1, x, y, Rec );
+    //     }
     }
 
 
@@ -458,11 +501,11 @@ int main(int argc, char *argv[] ){
 
 
 //     // Data << Nfd, err_SPOD;
-    write_dat( directory + "Outpt-ROM/Cumulative_sum_eigenvalues-vs-Nf_gaussian_u.dat", cumsum_u);
-    write_dat( directory + "Outpt-ROM/Error_reconstruction_Nmodes-vs-Nf_gaussian_u.dat", err_SPOD_u);
+    write_dat( directory + "Outpt-ROM/SPOD/Cumulative_sum_eigenvalues-vs-Nf_u.dat", cumsum_u);
+    write_dat( directory + "Outpt-ROM/SPOD/Error_reconstruction_Nmodes-vs-Nf_u.dat", err_SPOD_u);
 
-    write_dat( directory + "Outpt-ROM/Cumulative_sum_eigenvalues-vs-Nf_gaussian_v.dat", cumsum_v);
-    write_dat( directory + "Outpt-ROM/Error_reconstruction_Nmodes-vs-Nf_gaussian_v.dat", err_SPOD_v);
+    write_dat( directory + "Outpt-ROM/SPOD/Cumulative_sum_eigenvalues-vs-Nf_v.dat", cumsum_v);
+    write_dat( directory + "Outpt-ROM/SPOD/Error_reconstruction_Nmodes-vs-Nf_v.dat", err_SPOD_v);
 
     cout << "Main end" << endl;
 
@@ -515,9 +558,11 @@ Init_state_v = rho_v.cwiseQuotient(rho);
 // cout << "Fields reconstructed" << endl;
 
 MatrixXd Mode_dmd(Nr, 2*Ncut);
+MatrixXd Mode_dmd_im(Nr, 2*Ncut);
 MatrixXcd phi_dmd_u_saved = phi_dmd_u.leftCols(Ncut); 
 MatrixXcd phi_dmd_v_saved = phi_dmd_v.leftCols(Ncut); 
-// Mode_dmd << phi_dmd_u_saved.real(), phi_dmd_v_saved.real();
+Mode_dmd << phi_dmd_u_saved.real(), phi_dmd_v_saved.real();
+Mode_dmd_im << phi_dmd_u_saved.imag(), phi_dmd_v_saved.imag();
 // Mode_dmd << phi_dmd_u.real(), phi_dmd_v.real();
 cout << " Mode stored" << endl << endl;
 
@@ -611,16 +656,19 @@ headersdmd_mode[72] = "\"phi_v35\"";
 // // 
 // VectorXd Prev_state_u = rho_u_p.cwiseQuotient(rho_p);
 // VectorXd Prev_state_v = rho_v_p.cwiseQuotient(rho_p);
-write_restart2D(directory + "Outpt-ROM/ModesDMD.dat", headersdmd_mode, x, y, Mode_dmd);
+write_restart2D(directory + "Outpt-ROM/DMD/ModesDMDreal.dat", headersdmd_mode, x, y, Mode_dmd);
+write_restart2D(directory + "Outpt-ROM/DMD/ModesDMDimag.dat", headersdmd_mode, x, y, Mode_dmd_im);
 double err = 0.0;
 int count = 8;//(Ns-1)*read_sol_freq;
 double t_p = 0.0;
 double t_in = 0.0;
+VectorXcd b_u = coefs_dmd( phi_dmd_u, Init_state_u );
+VectorXcd b_v = coefs_dmd( phi_dmd_v, Init_state_v ); 
 
 //while ( err < 0.7 || count > 100 ){
 
     //count++;
-for ( int i = 0; i < Ns*m_skip-1; i +=3){
+for ( int i = 0; i < Ns*m_skip-1; i ++){
 
     
     cout << "Time instant : " << t_in << endl;
@@ -640,9 +688,7 @@ for ( int i = 0; i < Ns*m_skip-1; i +=3){
     VectorXd U_tstar = rho_u.cwiseQuotient(rho);
     VectorXd V_tstar = rho_v.cwiseQuotient(rho);
 
-    VectorXcd b_u = coefs_dmd( phi_dmd_u, Init_state_u );
-    VectorXcd Rec_dmd_u = Rec_field_dmd ( Nr, phi_dmd_u, lam_dmd_u, b_u, t_in );   
-    VectorXcd b_v = coefs_dmd( phi_dmd_v, Init_state_v );   
+    VectorXcd Rec_dmd_u = Rec_field_dmd ( Nr, phi_dmd_u, lam_dmd_u, b_u, t_in );     
     VectorXcd Rec_dmd_v = Rec_field_dmd ( Nr, phi_dmd_v, lam_dmd_v, b_v, t_in );   
 
     VectorXd diff_dmd_u = Rec_dmd_u.real() - U_tstar;
@@ -669,7 +715,7 @@ for ( int i = 0; i < Ns*m_skip-1; i +=3){
     write_restart2D(file_temp, headersrec, x, y, Rec);
 
 
-    t_in += 0.0015*3;
+    t_in += 0.001;
 
 }
 

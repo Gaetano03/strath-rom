@@ -16,7 +16,7 @@ MatrixXd POD_basis( int Nr, MatrixXd snap, VectorXd &K_pc, VectorXd &lam, Matrix
 
     int N_snap = snap.cols();
 
-    MatrixXd field(Nr, 1);
+    // MatrixXd field(Nr, 1);
     MatrixXd R(N_snap, N_snap);
     MatrixXd phi_c(Nr,N_snap);
     // MatrixXd eig_vec(N_snap, N_snap);
@@ -73,7 +73,7 @@ MatrixXd POD_basis( int Nr, MatrixXd snap, VectorXd &K_pc, VectorXd &lam, Matrix
 
     MatrixXd phi(Nr,count);
     for ( int i = 0 ; i < count ; i++ ){
-            phi.col(i) = phi_c.col(i);
+            phi.col(i) = phi_c.col(i)/sqrt(lam(i));
     
     }
 
@@ -260,7 +260,7 @@ MatrixXd SPOD_basis( int Nr, MatrixXd snap, int Nf,  VectorXd &K_pc, VectorXd &l
 
     MatrixXd phi(Nr,count);
     for ( int i = 0 ; i < count ; i++ )
-        phi.col(i) = phi_c.col(i);
+        phi.col(i) = phi_c.col(i)/sqrt(lam(i));
 
     // MatrixXd phit = phi.transpose()*phi;
     // MatrixXd coef = snap.transpose()*phi*phit.inverse();
@@ -326,16 +326,28 @@ MatrixXcd DMD_basis( int Nr, MatrixXd &snap, VectorXcd &lam, string flag = "STD"
         Sig_inv = MatrixXd::Zero(U.cols(), U.cols());
 
         for ( int i = 0; i < U.cols(); i++ )
-            Sig_inv(i, i) = 1.0/lam_POD(i); 
+            Sig_inv(i, i) = 1.0/sqrt(lam_POD(i)); 
     }
     else{
         Vp = MatrixXd::Zero(Ns, Ns);
         Vp = V;
         Sig_inv = MatrixXd::Zero(Ns, Ns);
         for ( int i = 0; i < Ns; i++ )
-            Sig_inv(i, i) = 1.0/lam_POD(i);
+            Sig_inv(i, i) = 1.0/sqrt(lam_POD(i));
 
     }
+
+    
+    MatrixXd I = MatrixXd::Identity(Ns, Ns);
+
+    cout << "size of V : (" << Vp.rows() << ", " << Vp.cols() << ")" << endl;
+    cout << "size of SigInv : (" << Sig_inv.rows() << ", " << Sig_inv.cols() << ")" << endl;
+    cout << "size of U : (" << U.rows() << ", " << U.cols() << ")" << endl;
+
+    MatrixXd errM = I - Vp*Sig_inv*U.transpose()*dmd1_snap;
+    double err = errM.norm();
+// 
+    // cout << "Error of DMD in solving the linear problem is : " << err << endl << endl;
 
     // cout << " U^T : \n " << U.transpose() << endl << endl;
     // cout << " dmd1_snap : \n " << dmd1_snap << endl << endl;
@@ -375,15 +387,33 @@ MatrixXcd DMD_basis( int Nr, MatrixXd &snap, VectorXcd &lam, string flag = "STD"
 //}
 
 
-MatrixXcd coefs_dmd ( MatrixXcd phi, VectorXd Init_state){
+VectorXcd coefs_dmd ( MatrixXcd phi, VectorXd Init_state){
 
     //Moore-Penrose pseudo-inverse with Eigen method
     // MatrixXcd pseudo_inv_phi = phi.completeOrthogonalDecomposition().pseudoInverse();
     
     // cout << " Size phiInv : (" << pseudo_inv_phi.rows() << ", " << pseudo_inv_phi.cols() << ")" << endl;
+    complex<double> img(0.0,1.0);
 
-    MatrixXcd phiTphi = phi.transpose()*phi;
-    MatrixXcd pseudo_inv_phi = phiTphi.inverse()*phi.transpose();
+    MatrixXcd phiTphi = phi.conjugate().transpose()*phi;
+    MatrixXd phiTphi_R = phiTphi.real();
+    MatrixXd invM = phiTphi_R.inverse();
+    VectorXcd phi_tb = phi.conjugate().transpose()*Init_state;
+    VectorXcd cn = phi_tb.transpose()*invM*phi_tb;
+    double angle = 0.5*arg(cn(0));
+    VectorXcd temp= phi_tb*exp(-img*angle);
+    VectorXd br = invM*temp.real();
+    VectorXcd b(invM.rows());
+//            
+    b = br*exp(img*angle);
+    cout << "Calculated Coefficients" << endl;
+
+    // VectorXd c = phir.colPivHouseholderQr().solve(Init_state);
+ 
+    // cout << "Inverse of the matrix of modes :\n " << phiTphi.inverse() << endl;  
+    // MatrixXcd pseudo_inv_phi = phiTphi.inverse()*phi.transpose();
+    // VectorXcd b = phi.colPivHouseholderQr().solve(Init_state);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
+
 
     // int n = pseudo_inv_phi.cols();
     // int m = pseudo_inv_phi.rows();
@@ -405,23 +435,33 @@ MatrixXcd coefs_dmd ( MatrixXcd phi, VectorXd Init_state){
     // cout << " phiTphi : \n" << pseudo_inv_phi << endl << endl; 
 
     // cout << " Size phi_inv: (" << pseudo_inv_phi.rows() << ", " << pseudo_inv_phi.cols() << ") " << endl;
+    // VectorXcd b = pseudo_inv_phi*Init_state; 
+    VectorXcd err_ls = Init_state - phi*b;
+    cout << " Error of least square complex method in calculating coefficients : " << err_ls.norm() << endl;
 
-    return pseudo_inv_phi*Init_state;
+    return b;
 
 }
 
 
 VectorXcd Rec_field_dmd ( int Nr, MatrixXcd phi, VectorXcd lam, VectorXcd coeffs, double t ){
 
-    double dt = 0.0015*6;
+    double dt = 0.001;
     VectorXcd final_state = VectorXcd::Zero(Nr);
     VectorXcd omega(lam.size());
 
-    for ( int i = 0; i < lam.size(); i ++)
+    for ( int i = 0; i < lam.size(); i ++){
         omega(i) = log(lam(i))/dt;
+
+        // if (i == 10){
+        // cout << "dmd eigenvalue : " << lam(i) << endl;
+        // cout << "Actual eigenvalue : " << omega(i)*dt << endl;
+        // }
+    }
 
     for ( int i = 0; i < lam.size(); i++ )
         final_state += exp(omega(i)*t)*coeffs(i)*phi.col(i);
+        
 
     return final_state;
 
@@ -461,7 +501,7 @@ VectorXd RBF_Coefs( MatrixXd Coefficients, MatrixXd phi, double Dt, double t_sta
         // CUBIC, GAUSSIAN, LINEAR, MULTIQUADRATICS
 
 
-        surr_coefs.push_back( rbf(T, coefs, CUBIC) );
+        surr_coefs.push_back( rbf(T, coefs, LINEAR) );
         surr_coefs[i].build();
         surr_coefs[i].evaluate(t,coefs_intrp[i]);
 

@@ -10,6 +10,7 @@
 #include <vector>
 #include <fstream>
 #include <sstream>
+#include <complex> 
 #include <cmath>
 #include <iomanip>
 #include <string>
@@ -18,9 +19,21 @@
 #include "LinearAlgebra/Eigen/Dense"
 #include "LinearAlgebra/Eigen/Eigenvalues"
 #include "LinearAlgebra/Eigen/Core"
+#include "LinearAlgebra/Eigen/Householder"
 
-using namespace std; 
+using namespace std;
 using namespace Eigen;
+
+int fibonacci( int i){
+
+  if (i < 0) return -1; /* F(i) non e' definito per interi i negativi! */
+
+  if (i == 0) return 0;
+  else if (i == 1) return 1;
+  else return fibonacci(i-1) + fibonacci(i-2);
+
+}
+
 
 
 void eig_sort(VectorXd &eig_val, MatrixXd &eig_vec)

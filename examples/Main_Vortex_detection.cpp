@@ -25,7 +25,7 @@ int main( int argc, char *argv[] ){
 
     string cas = argv[4];
     string directory = argv[5];
-    string filename = directory + "restart_flow.dat";
+    string filename = directory + "PODRec.dat";
 
     string file_in = directory + "gradients/gradients_";
     string file_out = directory + "vortices_criteria/Vortex_Criteria_";
@@ -102,12 +102,14 @@ int main( int argc, char *argv[] ){
         Nr = Ngrid_points( filename, 19 );
         cout << "Number of grid points: " << Nr << endl;
 
-        Nc = 31;
+        //Nc = 31;
+        Nc = 17;
         
 
 
         vector<int> col_xy = { 1, 2 };
-        col_grads = { 19, 20, 22, 23};
+        // col_grads = { 19, 20, 22, 23};
+        col_grads = { 5, 6, 8, 9};
 
         int N_grads;
         N_grads = col_grads.size();
@@ -117,7 +119,7 @@ int main( int argc, char *argv[] ){
 
 
         cout << "Reading coordinates" << endl;
-        read_restartDat ( filename, col_xy, 19, mat_xy );
+        read_restartDat ( filename, col_xy, 5, mat_xy );
 
         x = mat_xy.col(0);
         y = mat_xy.col(1);
