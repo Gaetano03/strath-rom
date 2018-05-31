@@ -96,7 +96,7 @@ int main(int argc, char *argv[] ){
     }
 
     snap << snap_u,
-            snap_v
+            snap_v,
             snap_w;
 
 
@@ -288,7 +288,7 @@ int main(int argc, char *argv[] ){
             cout << "Writing " << file_temp << endl << endl;
             
             Rec << Rec_field_tstar_POD_u, Rec_field_tstar_POD_v; 
-            write_restart3D( file_temp, headers1, x, y, Rec);
+            write_restart3D( file_temp, headers1, x, y, z, Rec);
             t += dt*sol_freq;
             count ++;
         }
@@ -401,7 +401,7 @@ int main(int argc, char *argv[] ){
 
         MatrixXd Modes(Nr, 2*Ncut);
         MatrixXd S_phi_u = S_phi.topRows(Nr);
-        MatrixXd S_phi_v = S_phi.middleRows(Nr);
+        MatrixXd S_phi_v = S_phi.middleRows(Nr,Nr);
         MatrixXd S_phi_w = S_phi.bottomRows(Nr);
 
         Modes << S_phi_u.leftCols(Ncut), S_phi_v.leftCols(Ncut), S_phi_w.leftCols(Ncut) ; 
@@ -496,7 +496,7 @@ int main(int argc, char *argv[] ){
         buffer1 << setfill('0') << setw(5) << to_string(Nf(i));
         file_temp = directory + "Outpt-ROM/SPOD/SPODRec_" + to_string(n_t[kk]) + "_" + "Nmod" + to_string(Nmod) + "_" + buffer1.str() + format; 
         cout << "Writing " << file_temp << "\t"; 
-        write_restart3D( file_temp, headers1, x, y, Rec );
+        write_restart3D( file_temp, headers1, x, y, z, Rec );
     //     }
         cout << "Complete" << endl << endl;
     }
