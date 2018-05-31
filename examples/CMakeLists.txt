@@ -10,5 +10,8 @@ target_link_libraries (RBM_surface_flow strath-rom ${MANDATORY_LIBRARIES})
 add_executable (RBM_flow RBM_flow.cpp)
 target_link_libraries (RBM_flow strath-rom ${MANDATORY_LIBRARIES})
 
+add_executable (RBM_flow_3D RBM_flow_3D.cpp)
+target_link_libraries (RBM_flow_3D strath-rom ${MANDATORY_LIBRARIES})
+
 add_executable (RBM_flow_update RBM_flow_update.cpp)
 target_link_libraries (RBM_flow_update strath-rom ${MANDATORY_LIBRARIES})

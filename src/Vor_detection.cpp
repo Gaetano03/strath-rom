@@ -218,6 +218,7 @@ MatrixXd Vortex_detection ( unsigned int Nr, int Nc, vector<int> col_grads, stri
 
     cout << "Reading gradient CSV" << endl;
     read_CSV ( filename, col_grads, Nc, mat_gradients );
+    cout << "Done" << endl;
 
     for ( unsigned int i = 0; i < Nr; i++){
 

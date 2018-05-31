@@ -99,7 +99,7 @@ int main( int argc, char *argv[] ){
         headers_vortex_det.push_back("\"Rortex\"");
 
 
-        Nr = Ngrid_points( filename, 19 );
+        Nr = Ngrid_points( filename, 5 );
         cout << "Number of grid points: " << Nr << endl;
 
         //Nc = 31;
