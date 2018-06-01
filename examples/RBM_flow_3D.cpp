@@ -9,6 +9,14 @@ int main(int argc, char *argv[] ){
 
     cout << "\nMain: start" << endl;
 
+    clock_t chrono_begin, chrono_end;
+    double comp_time;
+
+
+
+
+
+
     string flag = argv[1];
     int Ns = atoi(argv[2]);
     int sol_freq = 3;
@@ -19,7 +27,7 @@ int main(int argc, char *argv[] ){
     string filename = directory + "restart_flow.dat";
     int Nr = Ngrid_points( filename, 22 );
 
-    cout << "Number of grid points" << Nr << endl;
+    cout << "Number of grid points: " << Nr << endl;
 
     int Nc = 22;
 
@@ -52,13 +60,14 @@ int main(int argc, char *argv[] ){
     string file_in = "restart_flow_";
     string file_temp, file_coef;
     string format = ".dat";
-    string file_out = "Outpt-ROM/POD/PODRec_";
+    string file_out = "rbm-restart/POD/PODRec_";
 
     vector<int> col_xyz = { 1, 2, 3 };
     read_restartDat( filename, col_xyz, 22, mat_xyz );
 
     x = mat_xyz.col(0);
     y = mat_xyz.col(1);
+    z = mat_xyz.col(2);
 
     int k = 0;
     int n_t_first_snap = 0; 
@@ -107,9 +116,9 @@ int main(int argc, char *argv[] ){
     VectorXd lam(Ns);
     VectorXd K_pc(Ns);
 
-    int Ncut = 10;
+    int Ncut = 2;
 
-    vector<string> headers_mode(3*Ncut+4);
+    vector<string> headers_mode(34);
 
     // headers_mode[0] = "\"PointID\"";
     // headers_mode[1] = "\"x\"";
@@ -169,9 +178,11 @@ int main(int argc, char *argv[] ){
     
     if ( flag == "POD"){
 
-
-
+        chrono_begin = clock();
         phi = POD_basis( 3*Nr, snap, K_pc, lam, Coeffs);
+        chrono_end = clock();
+        comp_time = ((double)(chrono_end-chrono_begin))/CLOCKS_PER_SEC;
+        cout << "Computational time to calculate modes : " << comp_time << endl;
 
         int Nmod = phi.cols();
         VectorXd t_step(Ns*m_skip);
@@ -179,12 +190,10 @@ int main(int argc, char *argv[] ){
         phi_v = phi.middleRows(Nr,Nr);
         phi_w = phi.bottomRows(Nr);
 
-            cout << "modes Calculated" << endl;
-
         MatrixXd Modes(Nr, 3*Ncut);
         Modes << phi_u.leftCols(Ncut), phi_v.leftCols(Ncut), phi_w.leftCols(Ncut) ; 
         //write_restart2D(directory + "Outpt-ROM/POD/POD_Modes.dat", headers_mode, x, y, Modes);
-        write_dat(directory + "Outpt-ROM/POD/POD_coefs.dat", Coeffs);
+        write_dat("rbm-restart/POD/POD_coefs.dat", Coeffs);
 
         MatrixXd Sig = MatrixXd::Zero(phi.cols(), phi.cols());
 
@@ -238,7 +247,7 @@ int main(int argc, char *argv[] ){
 
 //             for ( int i = 0; i < n_t.size(); i++){
 
-
+            chrono_begin = clock();
             VectorXd coefs_interp = RBF_Coefs( Coeffs.transpose(), phi, Dt, t, t_init);
 
 
@@ -247,6 +256,9 @@ int main(int argc, char *argv[] ){
             Rec_field_tstar_POD_u = phi_u*Sig*coefs_interp.head(Nmod) + mean_u;
             Rec_field_tstar_POD_v = phi_v*Sig*coefs_interp.head(Nmod) + mean_v;
             Rec_field_tstar_POD_w = phi_w*Sig*coefs_interp.head(Nmod) + mean_w;
+            chrono_end = clock();
+            comp_time = ((double)(chrono_end-chrono_begin))/CLOCKS_PER_SEC;
+            cout << "Computational time to calculate reconstruction : " << comp_time << endl;
 
             VectorXd diff_POD_u = Rec_field_tstar_POD_u - U_tstar;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
             err_POD_u(count) = diff_POD_u.norm()/U_tstar.norm();
@@ -287,10 +299,10 @@ int main(int argc, char *argv[] ){
 // }   256
             stringstream dum7;
             dum7 << setfill('0') << setw(5) << to_string(kk);
-            file_temp = directory + file_out + dum7.str() + format;
+            file_temp = file_out + dum7.str() + format;
             cout << "Writing " << file_temp << endl << endl;
             
-            Rec << Rec_field_tstar_POD_u, Rec_field_tstar_POD_v; 
+            Rec << Rec_field_tstar_POD_u, Rec_field_tstar_POD_v, Rec_field_tstar_POD_w; 
             write_restart3D( file_temp, headers1, x, y, z, Rec);
             t += dt*sol_freq;
             count ++;
@@ -298,7 +310,7 @@ int main(int argc, char *argv[] ){
         MatrixXd err(Ns*m_skip,4);
         err << t_step, err_POD_u, err_POD_v, err_POD_w;
         cout << "Writing err_time.dat" << endl;
-        write_dat(directory + "Outpt-ROM/POD/err_timeUV.dat", err);
+        write_dat("rbm-restart/POD/err_timeUV.dat", err);
 
         cout << "Main end" << endl;
 
@@ -322,7 +334,7 @@ int main(int argc, char *argv[] ){
     // cout << endl;
     // cout << "Error norm of POD :" << setprecision(12) << err_POD << endl;
     // cout << endl;
-    string flag2 = "allmodes";
+    string flag2 = "truncate";
     int Nfnum = 7;
     MatrixXd cumsum(Ns, Nfnum);
     MatrixXd lambda(Ns, Nfnum);
@@ -382,8 +394,11 @@ int main(int argc, char *argv[] ){
 
     for ( int i = 0; i < Nfnum; i++){
 
-
+        chrono_begin = clock();
         MatrixXd S_phi = SPOD_basis( 3*Nr, snap, Nf(i), K_pc, lam, S_Coeffs, "ZERO", "BOX",  sigma );
+        chrono_end = clock();
+        comp_time = ((double)(chrono_end-chrono_begin))/CLOCKS_PER_SEC;
+        cout << "Computational time to calculate modes : " << comp_time << endl;
         int Nmod = S_phi.cols();
 
         cumsum.col(i) = K_pc;
@@ -399,10 +414,10 @@ int main(int argc, char *argv[] ){
         stringstream buffer;
         buffer << setfill('0') << setw(5) << to_string(Nf(i));
         // file_temp = directory + "Outpt-ROM/SPOD/SPOD_modes_Nf_" + buffer.str()+format;
-        file_coef = directory + "Outpt-ROM/SPOD/SPOD_coefs_Nf_" + buffer.str()+format;
+        file_coef = "rbm-restart/SPOD/SPOD_coefs_Nf_" + buffer.str()+format;
         cout << " Writing  coefficients" << "\t";
 
-        MatrixXd Modes(Nr, 2*Ncut);
+        MatrixXd Modes(Nr, 3*Ncut);
         MatrixXd S_phi_u = S_phi.topRows(Nr);
         MatrixXd S_phi_v = S_phi.middleRows(Nr,Nr);
         MatrixXd S_phi_w = S_phi.bottomRows(Nr);
@@ -411,7 +426,7 @@ int main(int argc, char *argv[] ){
 
         // write_restart2D(file_temp, headers_mode, x, y, Modes);
 
-        // write_dat(file_coef_u, S_Coeffs_u);
+        write_dat(file_coef, S_Coeffs);
         // write_dat(file_coef_v, S_Coeffs_v);
 
         cout << "Complete" << endl;
@@ -477,12 +492,11 @@ int main(int argc, char *argv[] ){
                 err_SPOD_w(Nmod+k,i) = err_SPOD_w(Nmod-1+k,i);
             }   
 
-
-            cout << "Error norm of SPOD on u using all modes for Nf = " << Nf(i) << " : " << setprecision(12) << err_SPOD_u(Nmod-1,i) << endl;
-            cout << "Error norm of SPOD on v using all modes for Nf = " << Nf(i) << " : " << setprecision(12) << err_SPOD_v(Nmod-1,i) << endl;
-            cout << "Error norm of SPOD on w using all modes for Nf = " << Nf(i) << " : " << setprecision(12) << err_SPOD_w(Nmod-1,i) << endl;
-
         }
+        
+        cout << "Error norm of SPOD on u using all modes for Nf = " << Nf(i) << " : " << setprecision(12) << err_SPOD_u(Nmod-1,i) << endl;
+        cout << "Error norm of SPOD on v using all modes for Nf = " << Nf(i) << " : " << setprecision(12) << err_SPOD_v(Nmod-1,i) << endl;
+        cout << "Error norm of SPOD on w using all modes for Nf = " << Nf(i) << " : " << setprecision(12) << err_SPOD_w(Nmod-1,i) << endl;
 
         //Truncation
         
@@ -497,7 +511,7 @@ int main(int argc, char *argv[] ){
         headers1[6] = "\"wSPOD\"";  
         stringstream buffer1;
         buffer1 << setfill('0') << setw(5) << to_string(Nf(i));
-        file_temp = directory + "Outpt-ROM/SPOD/SPODRec_" + to_string(n_t[kk]) + "_" + "Nmod" + to_string(Nmod) + "_" + buffer1.str() + format; 
+        file_temp = "rbm-restart/SPOD/SPODRec_" + to_string(n_t[kk]) + "_" + "Nmod" + to_string(Nmod) + "_" + buffer1.str() + format; 
         cout << "Writing " << file_temp << "\t"; 
         write_restart3D( file_temp, headers1, x, y, z, Rec );
     //     }
@@ -544,10 +558,10 @@ int main(int argc, char *argv[] ){
 
 
 //     // Data << Nfd, err_SPOD;
-    write_dat( directory + "Outpt-ROM/SPOD/Cumulative_sum_eigenvalues-vs-Nf.dat", cumsum);
-    write_dat( directory + "Outpt-ROM/SPOD/Error_reconstruction_Nmodes-vs-Nf_u.dat", err_SPOD_u);
-    write_dat( directory + "Outpt-ROM/SPOD/Error_reconstruction_Nmodes-vs-Nf_v.dat", err_SPOD_v);
-    write_dat( directory + "Outpt-ROM/SPOD/Error_reconstruction_Nmodes-vs-Nf_v.dat", err_SPOD_w);
+    write_dat( "rbm-restart/SPOD/Cumulative_sum_eigenvalues-vs-Nf.dat", cumsum);
+    write_dat( "rbm-restart/SPOD/Error_reconstruction_Nmodes-vs-Nf_u.dat", err_SPOD_u);
+    write_dat( "rbm-restart/SPOD/Error_reconstruction_Nmodes-vs-Nf_v.dat", err_SPOD_v);
+    write_dat( "rbm-restart/SPOD/Error_reconstruction_Nmodes-vs-Nf_v.dat", err_SPOD_w);
 
     cout << "Main end" << endl;
 
