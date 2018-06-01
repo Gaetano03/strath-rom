@@ -15,13 +15,15 @@ int main(int argc, char *argv[] ){
     int m_skip = atoi(argv[3]);
     int read_sol_freq = m_skip*sol_freq;
 
-    string directory = "/home/gaetano/workspace/Simulations/square_cylinder/";
+    string directory = "su2-restart/";
     string filename = directory + "restart_flow.dat";
-    int Nr = Ngrid_points( filename );
+    int Nr = Ngrid_points( filename, 22 );
 
-    int Nc = 4;
+    cout << "Number of grid points" << Nr << endl;
 
-    vector<int> n_cols = {0,1,2,3};
+    int Nc = 22;
+
+    vector<int> n_cols = {4,5,6,7};
 
     VectorXd x(Nr);
     VectorXd y(Nr); 
@@ -47,7 +49,7 @@ int main(int argc, char *argv[] ){
 
     // string file_in = "su2-snapshots/restart_flow_";
     string file_comp = "restart_flow_"; 
-    string file_in = "su2-snapshots/restart_flow_";
+    string file_in = "restart_flow_";
     string file_temp, file_coef;
     string format = ".dat";
     string file_out = "Outpt-ROM/POD/PODRec_";
@@ -66,6 +68,7 @@ int main(int argc, char *argv[] ){
     double Dt = read_sol_freq*dt;
     double t_init = dt*n_t_first_snap;
     vector<double> t_star(n_t.size());
+    cout << "Coordinates stored" << endl;
 
 
 

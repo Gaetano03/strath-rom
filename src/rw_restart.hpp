@@ -164,26 +164,36 @@ void read_restartDat(string filename, vector<int> n_col, int Nc, MatrixXd &field
     }
 
     string head;
+    long double monnezza;
 
     for ( int i = 0; i < Nc; i++ ) 
         flow_data >> head;    
-    
 
     for( int row = 0; row < Nr; row++ ){
         if ( !flow_data.good() )
             break;
-        
+
+
         int count = 0;
 
         for ( int col = 0; col < Nc; col++ ){
             flow_data >> head;
 
             if ( col == n_col[count] ){
+            
+                
+                monnezza = stold(head);
+                
+                if ( (monnezza!=0.0) && ((abs(monnezza) < 1e-300) || (abs(monnezza) > 1e300))){
+                    cout << " Valore monnezza : " << std::setprecision(17) << std::scientific << monnezza <<  " alla riga : "<< row << endl;
+                    monnezza = 0.0;
+                }
 
-                field(row, count) = stod(head);
+                field(row, count) = monnezza;
 
                 count++;
             }
+
 
         }
     }
