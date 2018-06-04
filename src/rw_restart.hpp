@@ -260,12 +260,11 @@ void write_restart3D(string filename, vector<string> headers, VectorXd x, Vector
     // Write fields
     for (unsigned int i = 0; i < Nr; i++){
 
-        flow_data << i+1 << " ";
         flow_data << setprecision(12) << scientific <<  x(i)  << " ";
         flow_data << setprecision(12) << scientific << y(i)  << " ";
         flow_data << setprecision(12) << scientific << z(i)  << " ";
 
-        for (int j = 0; j < Nc-4; j++){
+        for (int j = 0; j < Nc-3; j++){
 
             flow_data << setprecision(12) << scientific << Var(i,j) <<  " ";            
 
@@ -296,6 +295,56 @@ void write_restart3D(string filename, vector<string> headers, VectorXd x, Vector
 
 
 // }
+
+
+void read_gradient_dat ( string filename, vector<int> col_grads, int Nc, MatrixXd &field ){
+
+
+int Nr = field.rows();
+    ifstream flow_data;
+
+    if ( col_grads.size() != field.cols() )
+        cout << "ERROR : number of cols of field must matches with size cols!" << endl;
+
+    flow_data.open(filename.c_str());
+
+    if(!flow_data.is_open()){
+        cout << "\nFile: " << filename << " not found" << endl;
+        return;
+    }
+
+    string head;
+    long double monnezza;
+
+    for( int row = 0; row < Nr; row++ ){
+        if ( !flow_data.good() ){
+            cout << "Something very bad happened" << endl;
+            break;
+        }
+
+        int count = 0;
+
+        for ( int col = 0; col < Nc; col++ ){
+            flow_data >> head;
+
+            monnezza = stold(head);
+                
+            if ( (monnezza!=0.0) && ((abs(monnezza) < 1e-300) || (abs(monnezza) > 1e300))){
+                cout << " Valore monnezza : " << std::setprecision(17) << std::scientific << monnezza <<  " alla riga : "<< row << endl;
+                monnezza = 0.0;
+            }
+                
+            field(row, col) = monnezza;
+
+            }
+
+
+        }
+
+    flow_data.close();
+
+
+}
 
 
 #endif

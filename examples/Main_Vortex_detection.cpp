@@ -25,12 +25,12 @@ int main( int argc, char *argv[] ){
 
     string cas = argv[4];
     string directory = argv[5];
-    string filename = directory + "PODRec.dat";
+    string filename = directory + "restart_flow.dat";
 
     string file_in = directory + "gradients/gradients_";
     string file_out = directory + "vortices_criteria/Vortex_Criteria_";
     string file_temp_in, file_temp_out;
-    string format_in = ".csv";
+    string format_in = ".dat";
     string format_out = ".dat";
 
 
@@ -81,6 +81,40 @@ int main( int argc, char *argv[] ){
         z = mat_xyz.col(2);
 
     }
+
+    if ( cas == "3DTec"){
+
+        headers_vortex_det.push_back("\"x\"");
+        headers_vortex_det.push_back("\"y\"");
+        headers_vortex_det.push_back("\"z\"");
+        headers_vortex_det.push_back("\"Vort_magnitude\"");
+        headers_vortex_det.push_back("\"Rortex\"");
+        headers_vortex_det.push_back("\"Mach\"");
+
+
+        Nr = Ngrid_points( filename, 22 );
+        cout << "Number of grid points: " << Nr << endl;
+
+        Nc = 9;
+
+        vector<int> col_xyz = { 1, 2, 3 };
+        col_grads = { 0, 1, 2, 3, 4, 5, 6, 7, 8};
+        int N_grads;
+        N_grads = col_grads.size();
+
+
+        MatrixXd mat_xyz(Nr, 3);
+        // MatrixXd mat_Vortex_Det(Nr, 6);
+
+        cout << "Reading coordinates" << "\t";
+        read_restartDat ( filename, col_xyz, 22, mat_xyz );
+        cout << "Done" << endl << endl ;
+        x = mat_xyz.col(0);
+        y = mat_xyz.col(1);
+        z = mat_xyz.col(2);
+
+    }
+
 
 
     if ( cas == "2D"){
@@ -136,18 +170,38 @@ int main( int argc, char *argv[] ){
         buffer << setfill('0') << setw(5) << to_string(i);
         file_temp_in = file_in + buffer.str() + format_in;
         file_temp_out = file_out + buffer.str() + format_out;
-        
+  
+
+
 
         MatrixXd mat_Vortex_Det = Vortex_detection ( Nr, Nc, col_grads, file_temp_in ); 
-        cout << file_temp_in << endl;
 
         cout << "Calculated vortex criteria" << endl;
 
         if ( cas == "2D"){
             write_restart2D(file_temp_out, headers_vortex_det, x, y, mat_Vortex_Det);
         }
-        else{
+        else if( cas == "3D"){
             write_restart3D(file_temp_out, headers_vortex_det, x, y, z, mat_Vortex_Det);
+        }
+        else{
+
+            MatrixXd Data(Nr,mat_Vortex_Det.cols()+1);
+            
+            stringstream buffer1;
+            buffer1 << setfill('0') << setw(5) << to_string(i);
+            string file_res_in = "home/gaetano/data_prandtl/simulations/rbm-trap-wing/su2-restart/restart_flow_" + buffer1.str() + format_in;
+            // file_res_in = "restart_flow_" + buffer1.str() + format_in;
+            cout << "Reading Mach field from : " << file_res_in << "\t";
+            MatrixXd MM(Nr,1);
+            vector<int> col_M = {15};
+            read_restartDat ( file_res_in, col_M, 22, MM );
+            cout << "Done" << endl;
+            VectorXd Mach = MM.col(0);
+            Data << mat_Vortex_Det, Mach;
+            cout << "Writing vortices files: " << file_temp_out << "\t"; 
+            write_restart3D(file_temp_out, headers_vortex_det, x, y, z, Data);
+            cout << "Complete!"<< endl << endl;
         }
 
         cout << file_temp_out << endl;

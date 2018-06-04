@@ -265,7 +265,7 @@ int main(int argc, char *argv[] ){
             VectorXd diff_POD_v = Rec_field_tstar_POD_v - V_tstar;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
             err_POD_v(count) = diff_POD_v.norm()/V_tstar.norm();
             VectorXd diff_POD_w = Rec_field_tstar_POD_w - W_tstar;
-            err_POD_w(count) = diff_POD_v.norm()/V_tstar.norm();
+            err_POD_w(count) = diff_POD_w.norm()/W_tstar.norm();
 //             }
 
 //         Rec.col(i) = Rec_field_tstar_POD;
@@ -561,7 +561,7 @@ int main(int argc, char *argv[] ){
     write_dat( "rbm-restart/SPOD/Cumulative_sum_eigenvalues-vs-Nf.dat", cumsum);
     write_dat( "rbm-restart/SPOD/Error_reconstruction_Nmodes-vs-Nf_u.dat", err_SPOD_u);
     write_dat( "rbm-restart/SPOD/Error_reconstruction_Nmodes-vs-Nf_v.dat", err_SPOD_v);
-    write_dat( "rbm-restart/SPOD/Error_reconstruction_Nmodes-vs-Nf_v.dat", err_SPOD_w);
+    write_dat( "rbm-restart/SPOD/Error_reconstruction_Nmodes-vs-Nf_w.dat", err_SPOD_w);
 
     cout << "Main end" << endl;
 

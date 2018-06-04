@@ -11,13 +11,18 @@ int main(int argc, char *argv[] ){
 
     cout << "\nMain: start" << endl;
 
+
+    clock_t chrono_begin, chrono_end;
+    double comp_time;
+
+
     string flag = argv[1];
     int Ns = atoi(argv[2]);
-    int sol_freq = 3;
+    int sol_freq = 1;
     int m_skip = atoi(argv[3]);
     int read_sol_freq = m_skip*sol_freq;
 
-    string directory = "/home/gaetano/workspace/Simulations/square_cylinder/";
+    string directory = "/home/gaetano/workspace/Simulations/30P30Nunsteady/19deg/";
     string filename = directory + "restart_flow.dat";
     int Nr = Ngrid_points( filename );
 
@@ -47,7 +52,7 @@ int main(int argc, char *argv[] ){
     string file_in = "su2-snapshots/restart_flow_";
     string file_temp, file_coef;
     string format = ".dat";
-    string file_out = "Outpt-ROM/SPOD/SPODRec_";
+    string file_out = "Outpt-ROM/POD/PODRec_";
 
     vector<int> col_xy = { 1, 2 };
     read_restartDat( filename, col_xy, Nc, mat_xy );
@@ -56,9 +61,9 @@ int main(int argc, char *argv[] ){
     y = mat_xy.col(1);
 
     int k = 0;
-    int n_t_first_snap = 2301; 
-    // vector<int> n_t = {1, 3, 5, 7, 9};
-    vector<int> n_t = {2304, 2310, 2316, 2322, 2328};
+    int n_t_first_snap = 0; 
+    vector<int> n_t = {1, 3, 5, 7, 9};
+    // vector<int> n_t = {2304, 2310, 2316, 2322, 2328};
     double dt = 0.0015;
     double Dt = read_sol_freq*dt;
     double t_init = dt*n_t_first_snap;
@@ -149,8 +154,11 @@ int main(int argc, char *argv[] ){
     if ( flag == "POD"){
 
 
-
+        chrono_begin = clock();
         phi = POD_basis( 2*Nr, snap, K_pc, lam, Coeffs);
+        chrono_end = clock();
+        comp_time = ((double)(chrono_end-chrono_begin))/CLOCKS_PER_SEC;
+        cout << "Computational time to calculate modes : " << comp_time << endl;
 
         int Nmod = phi.cols();
         VectorXd t_step(Ns*m_skip);
@@ -211,14 +219,17 @@ int main(int argc, char *argv[] ){
 
 //             for ( int i = 0; i < n_t.size(); i++){
 
-
+            chrono_begin = clock();
             VectorXd coefs_interp = RBF_Coefs( Coeffs.transpose(), phi, Dt, t, t_init);
-
+            
 
 //                 for ( int j = 0; j < Nmod; j++){
 
             Rec_field_tstar_POD_u = phi_u*Sig*coefs_interp.head(Nmod) + mean_u;
             Rec_field_tstar_POD_v = phi_v*Sig*coefs_interp.head(Nmod) + mean_v;
+            chrono_end = clock();
+            comp_time = ((double)(chrono_end-chrono_begin))/CLOCKS_PER_SEC;
+            cout << "Computational time to calculate reconstruction : " << comp_time << endl;
 
             VectorXd diff_POD_u = Rec_field_tstar_POD_u - U_tstar;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
             err_POD_u(count) = diff_POD_u.norm()/U_tstar.norm();
@@ -350,9 +361,15 @@ int main(int argc, char *argv[] ){
 
     for ( int i = 0; i < Nfnum; i++){
 
-
+        chrono_begin = clock();
         MatrixXd S_phi = SPOD_basis( 2*Nr, snap, Nf(i), K_pc, lam, S_Coeffs, "ZERO", "BOX",  sigma );
+        chrono_end = clock();
+        comp_time = ((double)(chrono_end-chrono_begin))/CLOCKS_PER_SEC;
+        cout << "Computational time to calculate modes : " << comp_time << endl;
+
         int Nmod = S_phi.cols();
+
+        
 
         cumsum.col(i) = K_pc;
         lambda.col(i) = lam;

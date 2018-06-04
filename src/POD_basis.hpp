@@ -379,7 +379,7 @@ MatrixXcd DMD_basis( int Nr, MatrixXd &snap, VectorXcd &lam, string flag = "STD"
         return phi;
     }
 
-    return appo*eig_vec;
+    return U*eig_vec;
 
 }
 

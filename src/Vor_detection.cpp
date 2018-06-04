@@ -197,27 +197,28 @@ MatrixXd Vortex_detection ( unsigned int Nr, int Nc, vector<int> col_grads, stri
     else
         dim_grad = 3;
 
-    MatrixXd mat_Vortex_Det(Nr, 9);
+    // MatrixXd mat_Vortex_Det(Nr, 9);
+    MatrixXd mat_Vortex_Det(Nr, 2);
     MatrixXd gradV(dim_grad, dim_grad);
-    MatrixXd Omega(dim_grad, dim_grad);
-    MatrixXd Strain(dim_grad, dim_grad);
-    MatrixXd Strain_D(dim_grad, dim_grad);
+    // MatrixXd Omega(dim_grad, dim_grad);
+    // MatrixXd Strain(dim_grad, dim_grad);
+    // MatrixXd Strain_D(dim_grad, dim_grad);
 
-    MatrixXd Omega2(dim_grad, dim_grad);
-    MatrixXd Strain2(dim_grad, dim_grad);
-    MatrixXd Strain_D2(dim_grad, dim_grad);
+    // MatrixXd Omega2(dim_grad, dim_grad);
+    // MatrixXd Strain2(dim_grad, dim_grad);
+    // MatrixXd Strain_D2(dim_grad, dim_grad);
 
     VectorXd Vorticity(3);
     VectorXd V_Rortex(3);
 
-    double n_Omega2, n_Strain2, n_Strain_D2; 
-    double Delta;
+    // double n_Omega2, n_Strain2, n_Strain_D2; 
+    // double Delta;
     double alfa, beta;
 
-    VectorXcd lambda(dim_grad);
+    // VectorXcd lambda(dim_grad);
 
-    cout << "Reading gradient CSV" << endl;
-    read_CSV ( filename, col_grads, Nc, mat_gradients );
+    cout << "Reading gradient : " << filename <<  endl;
+    read_gradient_dat ( filename, col_grads, Nc, mat_gradients );
     cout << "Done" << endl;
 
     for ( unsigned int i = 0; i < Nr; i++){
@@ -242,58 +243,58 @@ MatrixXd Vortex_detection ( unsigned int Nr, int Nc, vector<int> col_grads, stri
             Zita = abs(gradV(1,0) - gradV(0,1));
         }
         else{
-            Q = -gradV(2, 0)*gradV(0, 2) - gradV(1, 0)*gradV(0, 1)
-                -gradV(2, 1)*gradV(1, 2) + gradV(1, 1)*gradV(2, 2)
-                + gradV(0, 0)*gradV(2, 2) + gradV(0, 0)*gradV(1, 1);    
-            R = -gradV.determinant();    
-            Vorticity(0) = gradV(2,1) - gradV(1,2);
-            Vorticity(1) = gradV(0,2) - gradV(2,0);
-            Vorticity(2) = gradV(1,0) - gradV(0,1);
+            // Q = -gradV(2, 0)*gradV(0, 2) - gradV(1, 0)*gradV(0, 1)
+            //     -gradV(2, 1)*gradV(1, 2) + gradV(1, 1)*gradV(2, 2)
+            //     + gradV(0, 0)*gradV(2, 2) + gradV(0, 0)*gradV(1, 1);    
+            // R = -gradV.determinant();    
+            // Vorticity(0) = gradV(2,1) - gradV(1,2);
+            // Vorticity(1) = gradV(0,2) - gradV(2,0);
+            // Vorticity(2) = gradV(1,0) - gradV(0,1);
             Zita = Vorticity.norm(); 
         }
 
-        Omega = 0.5*(gradV - gradV.transpose());
-        Strain = 0.5*(gradV + gradV.transpose());
-        MatrixXd I = MatrixXd::Identity(dim_grad, dim_grad);
-        Strain_D = Strain + P*I;
+        // Omega = 0.5*(gradV - gradV.transpose());
+        // Strain = 0.5*(gradV + gradV.transpose());
+        // MatrixXd I = MatrixXd::Identity(dim_grad, dim_grad);
+        // Strain_D = Strain + P*I;
 
-        Omega2 = Omega.transpose()*Omega;
-        Strain2 = Strain.transpose()*Strain;
-        Strain_D2 = Strain_D.transpose()*Strain_D;
+        // Omega2 = Omega.transpose()*Omega;
+        // Strain2 = Strain.transpose()*Strain;
+        // Strain_D2 = Strain_D.transpose()*Strain_D;
 
-        EigenSolver<MatrixXd> eigOmega2(Omega2);
-        EigenSolver<MatrixXd> eigStrain2(Strain2);
-        EigenSolver<MatrixXd> eigStrain_D2(Strain_D2);
+        // EigenSolver<MatrixXd> eigOmega2(Omega2);
+        // EigenSolver<MatrixXd> eigStrain2(Strain2);
+        // EigenSolver<MatrixXd> eigStrain_D2(Strain_D2);
 
-        VectorXcd lam_Omega2(dim_grad);
-        VectorXcd lam_Strain2(dim_grad);
-        VectorXcd lam_Strain_D2(dim_grad);
+        // VectorXcd lam_Omega2(dim_grad);
+        // VectorXcd lam_Strain2(dim_grad);
+        // VectorXcd lam_Strain_D2(dim_grad);
 
-        lam_Omega2 = eigOmega2.eigenvalues();
-        lam_Strain2 = eigStrain2.eigenvalues();
-        lam_Strain_D2 = eigStrain_D2.eigenvalues();
+        // lam_Omega2 = eigOmega2.eigenvalues();
+        // lam_Strain2 = eigStrain2.eigenvalues();
+        // lam_Strain_D2 = eigStrain_D2.eigenvalues();
 
-        n_Omega2 = lam_Omega2.real().maxCoeff();
-        n_Strain2 = lam_Strain2.real().maxCoeff();
-        n_Strain_D2 = lam_Strain_D2.real().maxCoeff();
+        // n_Omega2 = lam_Omega2.real().maxCoeff();
+        // n_Strain2 = lam_Strain2.real().maxCoeff();
+        // n_Strain_D2 = lam_Strain_D2.real().maxCoeff();
 
-        Q_crit_inc = 0.5*(n_Omega2 - n_Strain2);
-        Q_crit_c = 0.5*(n_Omega2 - n_Strain_D2);
-        Q_crit_inv = Q;
+        // Q_crit_inc = 0.5*(n_Omega2 - n_Strain2);
+        // Q_crit_c = 0.5*(n_Omega2 - n_Strain_D2);
+        // Q_crit_inv = Q;
 
-        N_k_inc = sqrt(n_Omega2)/sqrt(n_Strain2);
-        N_k_comp = sqrt(n_Omega2)/sqrt(n_Strain_D2);        
-        N_trusdell = Zita/(2.0*Strain_D2.norm()); 
+        // N_k_inc = sqrt(n_Omega2)/sqrt(n_Strain2);
+        // N_k_comp = sqrt(n_Omega2)/sqrt(n_Strain_D2);        
+        // N_trusdell = Zita/(2.0*Strain_D2.norm()); 
 
-        Delta = pow( Q/3.0 - pow(P,2.0)/9.0, 3.0) + pow( P*Q/6.0 - pow(P, 3.0)/27.0 - R/2.0, 2.0);
+        // Delta = pow( Q/3.0 - pow(P,2.0)/9.0, 3.0) + pow( P*Q/6.0 - pow(P, 3.0)/27.0 - R/2.0, 2.0);
 
-        if ( Delta > 0 ){
-            EigenSolver<MatrixXd> eig(gradV);
-            lambda = eig.eigenvalues();
-            Lam_ci = lambda.imag().maxCoeff();
-        }
-        else
-            Lam_ci = 0;
+        // if ( Delta > 0 ){
+        //     EigenSolver<MatrixXd> eig(gradV);
+        //     lambda = eig.eigenvalues();
+        //     Lam_ci = lambda.imag().maxCoeff();
+        // }
+        // else
+        //     Lam_ci = 0;
 
 
         MatrixXd gradVbar (dim_grad, dim_grad);
@@ -354,15 +355,17 @@ MatrixXd Vortex_detection ( unsigned int Nr, int Nc, vector<int> col_grads, stri
         // cin.get();
 
 
-        mat_Vortex_Det(i,0) = Q_crit_inc;
-        mat_Vortex_Det(i,1) = Q_crit_c;
-        mat_Vortex_Det(i,2) = Q_crit_inv;
-        mat_Vortex_Det(i,3) = N_k_inc;
-        mat_Vortex_Det(i,4) = N_k_comp;
-        mat_Vortex_Det(i,5) = Lam_ci;
-        mat_Vortex_Det(i,6) = N_trusdell;
-        mat_Vortex_Det(i,7) = Zita;
-        mat_Vortex_Det(i,8) = Rortex;
+        // mat_Vortex_Det(i,0) = Q_crit_inc;
+        // mat_Vortex_Det(i,1) = Q_crit_c;
+        // mat_Vortex_Det(i,2) = Q_crit_inv;
+        // mat_Vortex_Det(i,3) = N_k_inc;
+        // mat_Vortex_Det(i,4) = N_k_comp;
+        // mat_Vortex_Det(i,5) = Lam_ci;
+        // mat_Vortex_Det(i,6) = N_trusdell;
+        // mat_Vortex_Det(i,7) = Zita;
+        // mat_Vortex_Det(i,8) = Rortex;
+        mat_Vortex_Det(i,0) = Zita;
+        mat_Vortex_Det(i,1) = Rortex;
 
         // cout << "---------------------------------" << endl << endl;
         // cin.get();
