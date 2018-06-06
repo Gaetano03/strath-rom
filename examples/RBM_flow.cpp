@@ -46,7 +46,7 @@ int main(int argc, char *argv[] ){
     string file_in = "su2-snapshots/restart_flow_";
     string file_temp, file_coef_u, file_coef_v;
     string format = ".dat";
-    string file_out = "Outpt-ROM/SPOD/SPODRec_";
+    string file_out = "Outpt-ROM/DMD/DMDRec_";
 
     vector<int> col_xy = { 1, 2 };
     read_restartDat( filename, col_xy, Nc, mat_xy );

@@ -472,9 +472,9 @@ VectorXcd Rec_field_dmd ( int Nr, MatrixXcd phi, VectorXcd lam, VectorXcd coeffs
 
 
 
-VectorXd RBF_Coefs( MatrixXd Coefficients, MatrixXd phi, double Dt, double t_star, double t_init = 0.0){
+VectorXd RBF_Coefs( MatrixXd Coefficients, int Ns, double Dt, double t_star, double t_init = 0.0){
 
-    int Ns = phi.cols();
+
     MatrixXd Coeffs = Coefficients.leftCols(Ns);
     vector<vector<double>> T(Ns,vector<double>(1));
     vector<double> t(1,t_star);

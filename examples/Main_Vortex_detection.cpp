@@ -190,8 +190,8 @@ int main( int argc, char *argv[] ){
             
             stringstream buffer1;
             buffer1 << setfill('0') << setw(5) << to_string(i);
-            string file_res_in = "home/gaetano/data_prandtl/simulations/rbm-trap-wing/su2-restart/restart_flow_" + buffer1.str() + format_in;
-            // file_res_in = "restart_flow_" + buffer1.str() + format_in;
+            //string file_res_in = "home/gaetano/data_prandtl/simulations/rbm-trap-wing/su2-restart/restart_flow_" + buffer1.str() + format_in;
+            string file_res_in = "restart_flow_" + buffer1.str() + format_in;
             cout << "Reading Mach field from : " << file_res_in << "\t";
             MatrixXd MM(Nr,1);
             vector<int> col_M = {15};

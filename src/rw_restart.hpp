@@ -338,6 +338,8 @@ int Nr = field.rows();
 
             }
 
+        cout << field.row(row) << endl;
+        cin.get();
 
         }
 

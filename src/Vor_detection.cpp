@@ -247,9 +247,9 @@ MatrixXd Vortex_detection ( unsigned int Nr, int Nc, vector<int> col_grads, stri
             //     -gradV(2, 1)*gradV(1, 2) + gradV(1, 1)*gradV(2, 2)
             //     + gradV(0, 0)*gradV(2, 2) + gradV(0, 0)*gradV(1, 1);    
             // R = -gradV.determinant();    
-            // Vorticity(0) = gradV(2,1) - gradV(1,2);
-            // Vorticity(1) = gradV(0,2) - gradV(2,0);
-            // Vorticity(2) = gradV(1,0) - gradV(0,1);
+            Vorticity(0) = gradV(2,1) - gradV(1,2);
+            Vorticity(1) = gradV(0,2) - gradV(2,0);
+            Vorticity(2) = gradV(1,0) - gradV(0,1);
             Zita = Vorticity.norm(); 
         }
 
@@ -350,6 +350,12 @@ MatrixXd Vortex_detection ( unsigned int Nr, int Nc, vector<int> col_grads, stri
                 else{ 
                 Rortex = 2.0*abs(beta + alfa); // cout << "Rortex diverso da zero" << endl;
                 }
+
+        if (isnan(Rortex)){
+            cout << "Rortex is Nan at point  " << i << " for some bad reasons" << endl;
+            Rortex = 0.0; 
+
+        }
 
         // cout << "Rortex: " << Rortex << endl;
         // cin.get();
