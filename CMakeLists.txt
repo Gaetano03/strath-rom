@@ -69,6 +69,20 @@ set (MANDATORY_LIBRARIES "")
 include(cmake/Dependencies.cmake)
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Include all cpp in src
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 if (BUILD_STATIC)

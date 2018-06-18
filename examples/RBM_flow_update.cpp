@@ -18,7 +18,7 @@ int main(int argc, char *argv[] ){
 
     string flag = argv[1];
     int Ns = atoi(argv[2]);
-    int sol_freq = 3;
+    int sol_freq = 1;
     int m_skip = atoi(argv[3]);
     int read_sol_freq = m_skip*sol_freq;
 
@@ -61,10 +61,10 @@ int main(int argc, char *argv[] ){
     y = mat_xy.col(1);
 
     int k = 0;
-    int n_t_first_snap = 2301; 
+    int n_t_first_snap = 0; 
     vector<int> n_t = {1, 3, 5, 7, 9};
     // vector<int> n_t = {2304, 2310, 2316, 2322, 2328};
-    double dt = 0.0015;
+    double dt = 0.001;
     double Dt = read_sol_freq*dt;
     double t_init = dt*n_t_first_snap;
     vector<double> t_star(n_t.size());
@@ -170,7 +170,7 @@ int main(int argc, char *argv[] ){
         MatrixXd Modes(Nr, 2*Ncut);
         Modes << phi_u.leftCols(Ncut), phi_v.leftCols(Ncut) ; 
         write_restart2D(directory + "Outpt-ROM/POD/POD_Modes.dat", headers_mode, x, y, Modes);
-        write_dat(directory + "Outpt-ROM/POD/POD_coefs.dat", Coeffs);
+        // write_dat(directory + "Outpt-ROM/POD/POD_coefs.dat", Coeffs);
 
         MatrixXd Sig = MatrixXd::Zero(phi.cols(), phi.cols());
 
@@ -278,8 +278,8 @@ int main(int argc, char *argv[] ){
         }
         MatrixXd err(Ns*m_skip,3);
         err << t_step, err_POD_u, err_POD_v;
-        cout << "Writing err_time.dat" << endl;
-        write_dat(directory + "Outpt-ROM/POD/err_timeUV.dat", err);
+        // cout << "Writing err_time.dat" << endl;
+        // write_dat(directory + "Outpt-ROM/POD/err_timeUV.dat", err);
 
         cout << "Main end" << endl;
 
@@ -304,14 +304,14 @@ int main(int argc, char *argv[] ){
     // cout << "Error norm of POD :" << setprecision(12) << err_POD << endl;
     // cout << endl;
     string flag2 = "allmodes";
-    int Nfnum = 7;
+    int Nfnum = 5;
     MatrixXd cumsum(Ns, Nfnum);
     MatrixXd lambda(Ns, Nfnum);
 
     double sigma = 4.0;
 
-    VectorXd err_SPOD_u(Ns*m_skip*Ns*Nfnum);
-    VectorXd err_SPOD_v(Ns*m_skip*Ns*Nfnum);
+    VectorXd err_SPOD_u((m_skip-1)*(Ns-1)*Ns*Nfnum);
+    VectorXd err_SPOD_v((m_skip-1)*(Ns-1)*Ns*Nfnum);
 
     int kk = 0;
 
@@ -394,128 +394,144 @@ int main(int argc, char *argv[] ){
         // S_Coeffs = Coefs( S_phi, snap, Nr, "SPOD");
     double t = t_init;
     int count = 0;
-    VectorXd t_step(Ns*m_skip*Ns*Nfnum);
-    VectorXd N_filter(Ns*m_skip*Ns*Nfnum);
-    VectorXd N_modes(Ns*m_skip*Ns*Nfnum);
+    VectorXd t_step((m_skip-1)*(Ns-1)*Ns*Nfnum);
+    VectorXd N_filter((m_skip-1)*(Ns-1)*Ns*Nfnum);
+    VectorXd N_modes((m_skip-1)*(Ns-1)*Ns*Nfnum);
     
     cout << endl;
 
     cout << "--------- Reconstruction ---------" << endl;
 
+    int dd = 0;
 
-
-    for ( int kk = n_t_first_snap; kk < n_t_first_snap + read_sol_freq*Ns; kk += sol_freq ){
+    for ( int kk = n_t_first_snap; kk < n_t_first_snap + read_sol_freq*(Ns-1); kk += sol_freq ){
+    // for ( int kk = 2421; kk < n_t_first_snap + read_sol_freq*Ns; kk += sol_freq ){
 
         cout << "Time instant : " << t << endl; 
         
+        if (dd % 3 == 0){
+            dd++;
+            t += dt*sol_freq;            
+        }
+        else {
 
-        stringstream dum;
-        dum << setfill('0') << setw(5) << to_string(kk);
-        file_temp = directory + file_in + dum.str() + format;
+            dd++;
 
-        cout << "Reading exact solution  " << file_temp << endl;
+            stringstream dum;
+            dum << setfill('0') << setw(5) << to_string(kk);
+            file_temp = directory + file_in + dum.str() + format;
 
-        read_restartDat( file_temp, n_cols, Nc, field);
+            cout << "Reading exact solution  " << file_temp << "\t";
 
-        VectorXd rho = field.col(0);
-        VectorXd rho_u = field.col(1);
-        VectorXd rho_v = field.col(2);
+            read_restartDat( file_temp, n_cols, Nc, field);
 
-        VectorXd U_tstar = rho_u.cwiseQuotient(rho);
-        VectorXd V_tstar = rho_v.cwiseQuotient(rho);
+            cout << "Done" << endl;
+            VectorXd rho = field.col(0);
+            VectorXd rho_u = field.col(1);
+            VectorXd rho_v = field.col(2);
+
+            VectorXd U_tstar = rho_u.cwiseQuotient(rho);
+            VectorXd V_tstar = rho_v.cwiseQuotient(rho);
+
+      
 
 
-        for ( int i = 0; i < Nfnum; i++){
+            for ( int i = 0; i < Nfnum; i++){
 
-            S_Coeffs = S_Coeffs_Nf[i];
-            MatrixXd S_phi_u = S_phi_Nf_u[i];
-            MatrixXd S_phi_v = S_phi_Nf_v[i];
+                S_Coeffs = S_Coeffs_Nf[i];
+                MatrixXd S_phi_u = S_phi_Nf_u[i];
+                MatrixXd S_phi_v = S_phi_Nf_v[i];
 
-            VectorXd coefs_interp = RBF_Coefs( S_Coeffs.transpose(), Nmod(i), Dt, t, t_init);
+                VectorXd coefs_interp = RBF_Coefs( S_Coeffs.transpose(), Ns, Dt, t, t_init);
+          
+                // diff_SPOD = Rec_field_tstar_SPOD - field.col(0);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
+                // err_SPOD(i) = diff_SPOD.norm()/field.col(0).norm();
+                // cout << "Error norm of SPOD for Nf = " << Nf(i) << " : " << setprecision(12) << err_SPOD(i) << endl;
+                MatrixXd Sig = MatrixXd::Zero(Nmod(i), Nmod(i));
+                for ( int k = 0; k < Nmod(i); k++ )
+                    Sig(k, k) = sqrt(lambda(k,i));
+
+
+                    for ( int j = 0; j < Nmod(i); j++){
+                    
+                        Rec_field_tstar_SPOD_u = S_phi_u.leftCols(j+1)*Sig.topLeftCorner(j+1, j+1)*coefs_interp.head(j+1) + mean_u;
+                        diff_SPOD = Rec_field_tstar_SPOD_u - U_tstar;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
+                        err_SPOD_u(count) = diff_SPOD.norm()/U_tstar.norm();
+
+                        Rec_field_tstar_SPOD_v = S_phi_v.leftCols(j+1)*Sig.topLeftCorner(j+1, j+1)*coefs_interp.head(j+1) + mean_v;
+                        diff_SPOD = Rec_field_tstar_SPOD_v - V_tstar;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
+                        err_SPOD_v(count) = diff_SPOD.norm()/V_tstar.norm();
+                        t_step(count) = t;
+                        N_filter(count) = Nf(i);
+                        N_modes(count) = j+1;
+
+                        count++;
+
+                        // if ( (j > 2) && (flag2 == "truncate") && ( max(abs(err_SPOD_u(j,i)-err_SPOD_u(j-1,i)),abs(err_SPOD_v(j,i)-err_SPOD_v(j-1,i))) < tol ) &&
+                        // ( max(abs(err_SPOD_u(j,i)-err_SPOD_u(j-2,i)),abs(err_SPOD_v(j,i)-err_SPOD_v(j-2,i))) < tol ) ){
+                        //     Nmod = j+1;
+                        //     cout << "Number of modes used for Reconstruction: " << Nmod << endl;
+                        //     cout << "Value of the error for u : " << err_SPOD_u(j,i) << endl;
+                        //     cout << "Value of the error for v : " << err_SPOD_v(j,i) << endl;
+
+                        //     break;
+                        // }
+
+
+                    }
             
-            // diff_SPOD = Rec_field_tstar_SPOD - field.col(0);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-            // err_SPOD(i) = diff_SPOD.norm()/field.col(0).norm();
-            // cout << "Error norm of SPOD for Nf = " << Nf(i) << " : " << setprecision(12) << err_SPOD(i) << endl;
-            MatrixXd Sig = MatrixXd::Zero(Nmod(i), Nmod(i));
-            for ( int k = 0; k < Nmod(i); k++ )
-                Sig(k, k) = sqrt(lambda(k,i));
+
+                    cout << "Error norm of SPOD on u using all modes for Nf = " << Nf(i) << " : " << setprecision(12) << err_SPOD_u(count-1) << endl;
+                    cout << "Error norm of SPOD on v using all modes for Nf = " << Nf(i) << " : " << setprecision(12) << err_SPOD_v(count-1) << endl;
 
 
-                for ( int j = 0; j < Nmod(i); j++){
-                
-                    Rec_field_tstar_SPOD_u = S_phi_u.leftCols(j+1)*Sig.topLeftCorner(j+1, j+1)*coefs_interp.head(j+1) + mean_u;
-                    diff_SPOD = Rec_field_tstar_SPOD_u - U_tstar;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                    err_SPOD_u(count) = diff_SPOD.norm()/U_tstar.norm();
+            // Rec_u.col(i) = Rec_field_tstar_SPOD_u;
+            // headers1[i+3] = "\"u"+ to_string(Nf(i))+"\"";      
+            
+                // MatrixXd Rec(Nr, 2);
+                // Rec << Rec_field_tstar_SPOD_u, Rec_field_tstar_SPOD_v;
 
-                    Rec_field_tstar_SPOD_v = S_phi_v.leftCols(j+1)*Sig.topLeftCorner(j+1, j+1)*coefs_interp.head(j+1) + mean_v;
-                    diff_SPOD = Rec_field_tstar_SPOD_v - V_tstar;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                    err_SPOD_v(count) = diff_SPOD.norm()/V_tstar.norm();
-                    t_step(count) = t;
-                    N_filter(count) = Nf(i);
-                    N_modes(count) = j;
+                // Rec_v.col(i) = Rec_field_tstar_SPOD_v;
+                // headers1[Nfnum+i+3] = "\"v"+ to_string(Nf(i))+"\"";
 
-                    count++;
+                //if ( (flag2 == "allmodes") && (Nmod < Ns)){
 
-                    // if ( (j > 2) && (flag2 == "truncate") && ( max(abs(err_SPOD_u(j,i)-err_SPOD_u(j-1,i)),abs(err_SPOD_v(j,i)-err_SPOD_v(j-1,i))) < tol ) &&
-                    // ( max(abs(err_SPOD_u(j,i)-err_SPOD_u(j-2,i)),abs(err_SPOD_v(j,i)-err_SPOD_v(j-2,i))) < tol ) ){
-                    //     Nmod = j+1;
-                    //     cout << "Number of modes used for Reconstruction: " << Nmod << endl;
-                    //     cout << "Value of the error for u : " << err_SPOD_u(j,i) << endl;
-                    //     cout << "Value of the error for v : " << err_SPOD_v(j,i) << endl;
-
-                    //     break;
-                    // }
-
-
+                if ( Nmod(i) < Ns ){
+                    for ( int k = 0; k < Ns - Nmod(i); k++){
+                        err_SPOD_u(count) = err_SPOD_u(count-1);
+                        err_SPOD_v(count) = err_SPOD_v(count-1);
+                        t_step(count) = t;
+                        N_filter(count) = Nf(i);
+                        N_modes(count) = Nmod(i) + k + 1;
+                        count++;
+                    }   
                 }
-        
-
-                cout << "Error norm of SPOD on u using all modes for Nf = " << Nf(i) << " : " << setprecision(12) << err_SPOD_u(count-1) << endl;
-                cout << "Error norm of SPOD on v using all modes for Nf = " << Nf(i) << " : " << setprecision(12) << err_SPOD_v(count-1) << endl;
 
 
-        // Rec_u.col(i) = Rec_field_tstar_SPOD_u;
-        // headers1[i+3] = "\"u"+ to_string(Nf(i))+"\"";      
-        
-            // MatrixXd Rec(Nr, 2);
-            // Rec << Rec_field_tstar_SPOD_u, Rec_field_tstar_SPOD_v;
 
-            // Rec_v.col(i) = Rec_field_tstar_SPOD_v;
-            // headers1[Nfnum+i+3] = "\"v"+ to_string(Nf(i))+"\"";
+            //}
 
-            //if ( (flag2 == "allmodes") && (Nmod < Ns)){
+            //Truncation
+            
 
-            if ( Nmod(i) < Ns ){
-                for ( int k = 0; k < Ns - Nmod(i); k++){
-                    err_SPOD_u(count) = err_SPOD_u(count-1);
-                    err_SPOD_v(count) = err_SPOD_v(count-1);
-                    count++;
-                }   
+
+            // cout << "cycle ended" << endl;
+        //     if (i == 0){    
+        //         MatrixXd Rec(Nr, 2);
+        //         Rec << Rec_field_tstar_SPOD_u, Rec_field_tstar_SPOD_v;  
+            // headers1[3] = "\"uSPOD\"";   
+            // headers1[4] = "\"vSPOD\"";  
+            // stringstream buffer1;
+            // buffer1 << setfill('0') << setw(5) << to_string(Nf(i));
+            // file_temp = directory + "Outpt-ROM/SPOD/SPODRec_" + to_string(n_t[kk]) + "_" + "Nmod" + to_string(Nmod) + "_" + buffer1.str() + format; 
+            // cout << "Writing " << file_temp << "\t"; 
+            // write_restart2D( file_temp, headers1, x, y, Rec );
+                }
+                t += dt*sol_freq;
+                cout << endl;
+            // cout << "Complete" << endl << endl;
             }
 
-
-
-        //}
-
-        //Truncation
-        
-
-
-        // cout << "cycle ended" << endl;
-    //     if (i == 0){    
-    //         MatrixXd Rec(Nr, 2);
-    //         Rec << Rec_field_tstar_SPOD_u, Rec_field_tstar_SPOD_v;  
-        // headers1[3] = "\"uSPOD\"";   
-        // headers1[4] = "\"vSPOD\"";  
-        // stringstream buffer1;
-        // buffer1 << setfill('0') << setw(5) << to_string(Nf(i));
-        // file_temp = directory + "Outpt-ROM/SPOD/SPODRec_" + to_string(n_t[kk]) + "_" + "Nmod" + to_string(Nmod) + "_" + buffer1.str() + format; 
-        // cout << "Writing " << file_temp << "\t"; 
-        // write_restart2D( file_temp, headers1, x, y, Rec );
-            }
-            t += dt*sol_freq;
-            cout << endl;
-        // cout << "Complete" << endl << endl;
         }
     
 
@@ -559,10 +575,27 @@ int main(int argc, char *argv[] ){
 
 //     // Data << Nfd, err_SPOD;
 
-    MatrixXd D(Ns*m_skip*Ns*Nfnum,5);
-    D << t_step, N_filter, N_modes, err_SPOD_u, err_SPOD_v;
-    write_dat( directory + "Outpt-ROM/SPOD/Cumulative_sum_eigenvalues-vs-Nf.dat", cumsum);
-    write_dat( directory + "Outpt-ROM/SPOD/Error_reconstruction_Vs-Nmodes-Nf-t.dat", D);
+    MatrixXd D((m_skip-1)*(Ns-1)*Ns*Nfnum,5);
+    D << N_filter, t_step, N_modes, err_SPOD_u, err_SPOD_v;
+    vector<string> headers_cum(5);
+    vector<string> headers_err(5);
+
+    headers_cum[0] = "\"Nf=0\"";
+    headers_cum[1] = "\"Nf=10\"";
+    headers_cum[2] = "\"Nf=20\"";
+    headers_cum[3] = "\"Nf=30\"";
+    headers_cum[4] = "\"Nf=40\"";
+
+    headers_err[0] = "\"Filter_size\"";
+    headers_err[1] = "\"Time_step\"";
+    headers_err[2] = "\"N_modes\"";
+    headers_err[3] = "\"err_u\"";
+    headers_err[4] = "\"err_v\"";
+    
+
+
+    write_dat( directory + "Outpt-ROM/SPOD/Cumulative_sum40_eigenvalues-vs-Nf.dat", cumsum,headers_cum);
+    write_dat( directory + "Outpt-ROM/SPOD/Error_reconstruction40_Vs-Nmodes-Nf-t.dat", D, headers_err);
     // write_dat( directory + "Outpt-ROM/SPOD/Error_reconstruction_Nmodes-vs-Nf_v.dat", err_SPOD_v);
 
     cout << "Main end" << endl;

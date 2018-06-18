@@ -523,10 +523,15 @@ VectorXd RBF_Coefs( MatrixXd Coefficients, int Ns, double Dt, double t_star, dou
 
 
 
-void write_dat(string filename, MatrixXd A){
+void write_dat(string filename, MatrixXd A, vector<string> headers){
     
     ofstream data_array;
     data_array.open(filename.c_str());
+
+    for (int i = 0; i < A.cols(); i++)
+        data_array << headers[i] << "\t";
+
+    data_array << endl;
 
     for (int i = 0; i < A.rows(); i++){
         for (int j = 0; j < A.cols(); j++)
